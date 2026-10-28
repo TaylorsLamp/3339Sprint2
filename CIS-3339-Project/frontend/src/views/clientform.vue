@@ -185,9 +185,12 @@ import { useToast } from 'vue-toastification'
 //Notifications
 const toast = useToast()
 
+import { reactive, toRefs, onMounted, onBeforeMount } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 export default {
-  data() {
-    return {
+  setup() {
+    // Sprint 2: reactive state replaces Options API data().
+    const state = reactive({
       //client variable to hold new client information
       client: {
         firstName: null,
@@ -206,16 +209,12 @@ export default {
           zip: null
         },
       }
-    }
-  },
-  setup() {
+    })
+const router = useRouter()
+const route = useRoute()
     // Register Vuelidate
-    const v$ = useVuelidate();
-    return { v$ };
-  },
-  validations() {
-    // validations for client
-    return {
+    // Validation rules now receive Composition API reactive state.
+    const rules = {
       client: {
         firstName: { required },
         lastName: { required },
@@ -232,27 +231,29 @@ export default {
           city: { required },
         },
       },
-    };
-  },
-  methods: {
-    // method called when user submits the form
-    async submitForm() {
-      // Trigger validation
-      this.v$.$validate();
+    }
+        const v$ = useVuelidate(rules, state)
+    // Methods are now functions in setup(), exposed to the template.
 
-      if (this.v$.$error) {
+    async function submitForm() {
+      // Trigger validation
+      v$.value.$validate();
+
+      if (v$.value.$error) {
         // Form is invalid, do not proceed
         return;
       }
 
       try {
-        const response = await createClient(this.client);
-        this.$router.push('/findclient')
+        const response = await createClient(state.client);
+        router.push('/findclient')
         toast.success(response)
       } catch (error) {
         toast.error(error)
       }
-    },
+    }
+
+    return { ...toRefs(state), submitForm, v$ }
   }
 }
 </script>
