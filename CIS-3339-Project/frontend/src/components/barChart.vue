@@ -11,6 +11,7 @@ import { Colors } from 'chart.js';
 Chart.register(...registerables)
 Chart.register(Colors);
 
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 export default {
   props: {
     label: {
@@ -19,16 +20,20 @@ export default {
     chartData: {
       type: Array
     }
-  },
-  async mounted() {
-    await new Chart(this.$refs.attendanceChart, {
+    },
+  setup(props) {
+    // Sprint 2: reactive state replaces Options API data().
+    const chartCanvas = ref(null)
+    let chartInstance = null
+    onMounted(async () => {
+    chartInstance = new Chart(chartCanvas.value, {
       type: 'bar',
       data: {
-        labels: this.label,
+        labels: props.label,
         datasets: [
           {
             borderWidth: 1,
-            data: this.chartData
+            data: props.chartData
           }
         ]
       },
@@ -58,6 +63,10 @@ export default {
         maintainAspectRatio: true
       }
     })
+  
+    })
+    onBeforeUnmount(() => chartInstance?.destroy())
+    return { attendanceChart: chartCanvas }
   }
 }
 </script>

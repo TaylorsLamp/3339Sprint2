@@ -8,6 +8,7 @@
 import { Chart, registerables } from 'chart.js'
 Chart.register(...registerables)
 //define props (label and chartData)
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 export default {
   props: {
     label: {
@@ -16,16 +17,20 @@ export default {
     chartData: {
       type: Array
     }
-  },
-  async mounted() { //uses the data to load the chart's values
-    await new Chart(this.$refs.zipChart, {
+    },
+  setup(props) {
+    // Sprint 2: reactive state replaces Options API data().
+    const chartCanvas = ref(null)
+    let chartInstance = null
+    onMounted(async () => { //uses the data to load the chart's values
+    chartInstance = new Chart(chartCanvas.value, {
       type: 'doughnut',
       data: {
-        labels: this.label,
+        labels: props.label,
         datasets: [
           {
             borderWidth: 1,
-            data: this.chartData // Update this line
+            data: props.chartData // Update this line
           }
         ]
       },
@@ -43,6 +48,10 @@ export default {
         maintainAspectRatio: true
       }
     })
-  },
+  
+    })
+    onBeforeUnmount(() => chartInstance?.destroy())
+    return { zipChart: chartCanvas }
+  }
 }
 </script>

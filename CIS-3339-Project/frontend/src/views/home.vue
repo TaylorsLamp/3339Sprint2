@@ -129,13 +129,15 @@ import AttendanceChart from '../components/barChart.vue'
 import ZipChart from '../components/donutZipChart.vue'
 import { getAttendance, getClientsByZipCode } from '../api/api'
 
+import { reactive, toRefs, onMounted, onBeforeMount } from 'vue'
 export default {
   components: {
     AttendanceChart,
     ZipChart,
-  },
-  data() {
-    return {
+    },
+  setup() {
+    // Sprint 2: reactive state replaces Options API data().
+    const state = reactive({
       recentEvents: [],
       zips: [],
       labels: [],
@@ -146,87 +148,91 @@ export default {
       error: null,
       zipLoading: false,
       zipError: null
-    }
-  },
-  mounted() {
-    this.getAttendanceData()
-    this.getZipData()
-  },
-  methods: {
-    async getAttendanceData() {
+    })
+    // Methods are now functions in setup(), exposed to the template.
+
+    async function getAttendanceData() {
       try {
-        this.error = null
-        this.loading = true
+        state.error = null
+        state.loading = true
         
         const attendance = await getAttendance();
-        this.recentEvents = attendance;
-        this.labels = attendance.map(
-          (item) => `${item.name} (${this.formatDate(item.date)})`
+        state.recentEvents = attendance;
+        state.labels = attendance.map(
+          (item) => `${item.name} (${formatDate(item.date)})`
         )
-        this.chartData = attendance.map((item) => item.attendees.length)
+        state.chartData = attendance.map((item) => item.attendees.length)
       } catch (err) {
         if (err.response) {
           // client received an error response (5xx, 4xx)
-          this.error = {
+          state.error = {
             title: 'Server Response',
             message: err.message
           }
         } else if (err.request) {
           // client never received a response, or request never left
-          this.error = {
+          state.error = {
             title: 'Unable to Reach Server',
             message: err.message
           }
         } else {
           // There's probably an error in your code
-          this.error = {
+          state.error = {
             title: 'Application Error',
             message: err.message
           }
         }
       }
-      this.loading = false
-    },
-    async getZipData() {
+      state.loading = false
+    }
+
+    async function getZipData() {
       try {
-        this.zipError = null
-        this.zipLoading = true
+        state.zipError = null
+        state.zipLoading = true
         
         const zipdata = await getClientsByZipCode();
-        this.zips = zipdata;
-        this.zipLabels = zipdata.map((item) => item._id)
-        this.zipChartData = zipdata.map((item) => item.count)
+        state.zips = zipdata;
+        state.zipLabels = zipdata.map((item) => item._id)
+        state.zipChartData = zipdata.map((item) => item.count)
       } catch (err) {
         if (err.response) {
           // client received an error response (5xx, 4xx)
-          this.zipError = {
+          state.zipError = {
             title: 'Server Response',
             message: err.message
           }
         } else if (err.request) {
           // client never received a response, or request never left
-          this.zipError = {
+          state.zipError = {
             title: 'Unable to Reach Server',
             message: err.message
           }
         } else {
           // There's probably an error in your code
-          this.zipError = {
+          state.zipError = {
             title: 'Application Error',
             message: err.message
           }
         }
       }
-      this.zipLoading = false
-    },
-    // method called to format the event date
-    formatDate(date) {
+      state.zipLoading = false
+    }
+
+    function formatDate(date) {
       const isoDate = new Date(date);
       const year = isoDate.getUTCFullYear();
       const month = String(isoDate.getUTCMonth() + 1).padStart(2, '0');
       const day = String(isoDate.getUTCDate()).padStart(2, '0');
       return `${month}/${day}/${year}`;
-    },
+    }
+
+    onMounted(async () => {
+    getAttendanceData()
+    getZipData()
+  
+    })
+    return { ...toRefs(state), getAttendanceData, getZipData, formatDate }
   }
 }
 </script>
