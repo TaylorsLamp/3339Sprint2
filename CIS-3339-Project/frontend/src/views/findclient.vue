@@ -102,9 +102,11 @@ import { useToast } from 'vue-toastification'
 //Notifications
 const toast = useToast()
 
+import { reactive, toRefs, onMounted, onBeforeMount } from 'vue'
 export default {
-  data() {
-    return {
+  setup() {
+    // Sprint 2: reactive state replaces Options API data().
+    const state = reactive({
       //variable to store all clients and their information for the organization
       clients: null,
       // Parameters for search to occur
@@ -114,62 +116,64 @@ export default {
       phoneNumber: '',
       // variable stores the ID of the row that the mouse is currently hovering over (to highlight the row red)
       hoverId: null,
-    }
-  },
-  mounted() {
-    // when component is mounted, load the data -
-    this.loadData()
-  },
-  methods: {
-    // method called when component is mounted
-    async loadData() {
+    })
+    // Methods are now functions in setup(), exposed to the template.
+
+    async function loadData() {
       // Resets all the variables
-      this.searchBy = ''
-      this.firstName = ''
-      this.lastName = ''
-      this.phoneNumber = ''
+      state.searchBy = ''
+      state.firstName = ''
+      state.lastName = ''
+      state.phoneNumber = ''
 
       // get list of clients
       try {
         const response = await getClients();
-        this.clients = response;
+        state.clients = response;
       } catch (error) {
         toast.error(error)
       }
-    },
-    // method called when user searches for clients
-    async handleSubmitForm() {
+    }
+
+    async function handleSubmitForm() {
       // if user searched by client name
-      if (this.searchBy === 'Client Name') {
-        if (this.firstName || this.lastName) {
+      if (state.searchBy === 'Client Name') {
+        if (state.firstName || state.lastName) {
           try {
             const query = {
               searchBy: 'name',
-              firstName: this.firstName,
-              lastName: this.lastName,
+              firstName: state.firstName,
+              lastName: state.lastName,
             }
             const response = await searchClients(query)
-            this.clients = response;
+            state.clients = response;
           } catch (error) {
             toast.error(error)
           }
         }
         // if user searches by client phone number
-      } else if (this.searchBy === 'Client Number') {
-        if (this.phoneNumber) {
+      } else if (state.searchBy === 'Client Number') {
+        if (state.phoneNumber) {
           try {
             const query = {
               searchBy: 'number',
-              phoneNumber: this.phoneNumber
+              phoneNumber: state.phoneNumber
             }
             const response = await searchClients(query)
-            this.clients = response;
+            state.clients = response;
           } catch (error) {
             toast.error(error)
           }
         }
       }
-    },
-  },
+    }
+
+    onMounted(async () => {
+    // when component is mounted, load the data -
+    loadData()
+  
+    })
+    return { ...toRefs(state), loadData, handleSubmitForm }
+  }
 }
 </script>

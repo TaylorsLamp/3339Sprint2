@@ -90,9 +90,11 @@ import { useToast } from 'vue-toastification'
 //Notifications
 const toast = useToast()
 
+import { reactive, toRefs, onMounted, onBeforeMount } from 'vue'
 export default {
-  data() {
-    return {
+  setup() {
+    // Sprint 2: reactive state replaces Options API data().
+    const state = reactive({ isLoading: false,
       //variable to hold all events for the organization
       events: null,
       // Parameters for search to occur
@@ -101,74 +103,74 @@ export default {
       eventDate: null,
       // variable stores the ID of the row that the mouse is currently hovering over (to highlight the row red)
       hoverId: null,
-    }
-  },
-  mounted() {
-    // when component is mounted, load the data
-    this.loadData();
-  },
-  methods: {
-    // method called when component is mounted
-    async loadData() {
+    })
+    // Methods are now functions in setup(), exposed to the template.
+
+    async function loadData() {
       // Resets variables used for search
-      this.searchBy = null
-      this.name = null
-      this.eventDate = null
+      state.searchBy = null
+      state.name = null
+      state.eventDate = null
 
       // show loading wheel
-      this.isLoading = true;
+      state.isLoading = true;
       // get list of events
       try {
         const response = await getEvents();
-        this.events = response;
+        state.events = response;
       } catch (error) {
         toast.error('loadData error', error)
       }
-    },
+    }
 
-    // method called when user searches for an event
-    async handleSubmitForm() {
+    async function handleSubmitForm() {
       // if user searches by event name
-      if (this.searchBy === 'Event Name') {
-        if (this.name) {
+      if (state.searchBy === 'Event Name') {
+        if (state.name) {
           try {
             const query = {
               searchBy: 'name',
-              name: this.name
+              name: state.name
             };
             const response = await searchEvents(query);
-            this.events = response;
+            state.events = response;
           } catch (error) {
             toast.error('Error searching events', error)
           }
         }
         // if user searches by event date
-      } else if (this.searchBy === 'Event Date') {
-        if (this.eventDate) {
+      } else if (state.searchBy === 'Event Date') {
+        if (state.eventDate) {
           try {
-            const eventDate = new Date(this.eventDate);
+            const eventDate = new Date(state.eventDate);
             const formattedDate = eventDate.toISOString().substring(0, 10);
             const query = {
               searchBy: 'date',
               eventDate: formattedDate
             };
             const response = await searchEvents(query);
-            this.events = response;
+            state.events = response;
           } catch (error) {
             toast.error('Error searching events:', error)
           }
         }
       }
-    },
+    }
 
-    // method called for each event date so it will be formatted correctly on the table
-    formatDate(date) {
+    function formatDate(date) {
       const isoDate = new Date(date);
       const year = isoDate.getUTCFullYear();
       const month = String(isoDate.getUTCMonth() + 1).padStart(2, '0');
       const day = String(isoDate.getUTCDate()).padStart(2, '0');
       return `${month}/${day}/${year}`;
-    },
-  },
+    }
+
+    onMounted(async () => {
+    // when component is mounted, load the data
+    loadData();
+  
+    })
+    return { ...toRefs(state), loadData, handleSubmitForm, formatDate }
+  }
 }
 </script>
