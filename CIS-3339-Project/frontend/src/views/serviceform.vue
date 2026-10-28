@@ -86,49 +86,26 @@ import { useToast } from 'vue-toastification'
 //Notifications
 const toast = useToast()
 
+
+import { reactive, toRefs } from 'vue'
+import { useRouter } from 'vue-router'
 export default {
-    data() {
-        return {
-            //variable to hold new service information
-            service: {
-                name: null,
-                description: null,
-                status: "Active",
-            },
-        }
-    },
-    setup() {
-        // Register Vuelidate
-        const v$ = useVuelidate();
-        return { v$ };
-    },
-    validations() {
-        // validations for service
-        return {
-            service: {
-                name: { required },
-            }
-        }
-    },
-    methods: {
-        // method called when user attempts to create new service
-        async handleSubmitForm() {
-            // Trigger validation
-            this.v$.$validate();
-
-            if (this.v$.$error) {
-                // Form is invalid, do not proceed
-                return;
-            }
-
-            try {
-                const response = await createService(this.service);
-                toast.success(response)
-                this.$router.push('/findservice')
-            } catch (error) {
-                toast.error('Error creating new service:', error)
-            }
-        },
+  setup() {
+    // Replace Options API data and validations with Composition API state.
+    const state = reactive({ service: { name: null, description: null, status: 'Active' } })
+    const router = useRouter()
+    const rules = { service: { name: { required } } }
+    const v$ = useVuelidate(rules, state)
+    async function handleSubmitForm() {
+      await v$.value.$validate()
+      if (v$.value.$error) return
+      try {
+        const response = await createService(state.service)
+        toast.success(response)
+        router.push('/findservice')
+      } catch (error) { toast.error('Error creating new service:', error) }
     }
+    return { ...toRefs(state), v$, handleSubmitForm }
+  }
 }
 </script>
