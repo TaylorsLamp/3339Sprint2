@@ -97,32 +97,37 @@ import { useToast } from 'vue-toastification'
 //Notifications
 const toast = useToast()
 
+import { reactive, toRefs, onMounted, onBeforeMount } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 export default {
   setup() {
-    const user = useLoggedInUserStore();
-    return { user };
-  },
-  data() {
-    return {
+    // Sprint 2: reactive state replaces Options API data().
+    const state = reactive({
       orgName: "Dataplatform",
-    };
-  },
-  async created() {
-    try {
-      this.orgName = await getOrgName();
-    } catch {
-      throw (error)
-    }
-  },
-  methods: {
-    logout() {
+    })
+const router = useRouter()
+const route = useRoute()
+    const user = useLoggedInUserStore();
+    // Methods are now functions in setup(), exposed to the template.
+
+    function logout() {
       try {
-        this.$store.dispatch('clearSessionData');
-        this.$router.push('/')
+        user.logout();
+        router.push('/')
       } catch (error) {
         toast.error('logout error', error)
       }
-    },
+    }
+
+    onBeforeMount(async () => {
+    try {
+      state.orgName = await getOrgName();
+    } catch (error) {
+      toast.error(error)
+    }
+  
+    })
+    return { ...toRefs(state), logout, user }
   }
 }
 </script>

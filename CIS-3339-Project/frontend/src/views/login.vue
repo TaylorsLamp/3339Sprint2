@@ -32,21 +32,15 @@
 </template>
 
 <script>
-  import { useLoggedInUserStore } from "../store/loggedInUser";
-
-  export default {
-    data() {
-      return {
-        username: "",
-        password: "",
-      }
-    },
-    setup() {
-      const store = useLoggedInUserStore();
-      return {
-        store
-      }
-    }
+import { reactive, toRefs } from 'vue'
+import { useLoggedInUserStore } from '../store/loggedInUser'
+export default {
+  setup() {
+    // Composition API state for login credentials.
+    const state = reactive({ username: '', password: '' })
+    const store = useLoggedInUserStore()
+    return { ...toRefs(state), store }
   }
+}
 </script>
 
