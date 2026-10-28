@@ -164,9 +164,12 @@ import { useToast } from 'vue-toastification'
 //Notifications
 const toast = useToast()
 
+import { reactive, toRefs, onMounted, onBeforeMount } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 export default {
-  data() {
-    return {
+  setup() {
+    // Sprint 2: reactive state replaces Options API data().
+    const state = reactive({
       // event variable to hold new event information
       event: {
         name: null,
@@ -186,27 +189,12 @@ export default {
       activeServices: [],
       // variable that determines which services in the List of Services checkboxes have expanded details
       openDescriptions: [],
-    }
-  },
-  setup() {
+    })
+const router = useRouter()
+const route = useRoute()
     // Register Vuelidate
-    const v$ = useVuelidate();
-    return { v$ };
-  },
-  validations() {
-    // validations
-    const validDate = (value) => {
-      const date = new Date(value)
-      return !isNaN(date)
-    }
-
-    // prevents form submission if new event has a date before the current date
-    const notBeforeToday = (value) => {
-      const today = new Date()
-      return value >= today.toISOString().split('T')[0]
-    }
-
-    return {
+    // Validation rules now receive Composition API reactive state.
+    const rules = {
       event: {
         name: { required },
         date: {
@@ -216,36 +204,39 @@ export default {
         },
       }
     }
-  },
-  async mounted() {
-    // when component is mounted, data is loaded
-    try {
-        const response = await getServices();
-        this.activeServices = response.filter(item => item.status === "Active")
-      } catch (error) {
-        toast.error(error)
-      }
-  },
-  methods: {
-    // method called when user tries to create new event
-    async handleSubmitForm() {
-      // Trigger validation
-      this.v$.$validate();
+        const v$ = useVuelidate(rules, state)
+    // Methods are now functions in setup(), exposed to the template.
 
-      if (this.v$.$error) {
+    async function handleSubmitForm() {
+      // Trigger validation
+      v$.value.$validate();
+
+      if (v$.value.$error) {
         toast.error('Please fix input field errors')
         // Form is invalid, do not proceed
         return;
       }
 
       try {
-        const response = await createEvent(this.event);
-        this.$router.push('/findevents')
+        const response = await createEvent(state.event);
+        router.push('/findevents')
         toast.success(response)
       } catch (error) {
         toast.error('error creating new event:', error)
       }
-    },
-  },
+    }
+
+    onMounted(async () => {
+    // when component is mounted, data is loaded
+    try {
+        const response = await getServices();
+        state.activeServices = response.filter(item => item.status === "Active")
+      } catch (error) {
+        toast.error(error)
+      }
+  
+    })
+    return { ...toRefs(state), handleSubmitForm, v$ }
+  }
 }
 </script>

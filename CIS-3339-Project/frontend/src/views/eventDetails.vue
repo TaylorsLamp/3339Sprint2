@@ -205,9 +205,12 @@ import { useToast } from 'vue-toastification'
 //Notifications
 const toast = useToast()
 
+import { reactive, toRefs, onMounted, onBeforeMount } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 export default {
-  data() {
-    return {
+  setup() {
+    // Sprint 2: reactive state replaces Options API data().
+    const state = reactive({
       //variable to hold clients for selected event
       clients: [],
       //variable to hold services for selected event
@@ -229,22 +232,14 @@ export default {
       },
       // variable stores the ID of the row that the mouse is currently hovering over (to highlight the row red)
       hoverId: null,
-    }
-  },
-  setup() {
+    })
+const router = useRouter()
+const route = useRoute()
     // register Vuelidate and loggedIn store
-    const v$ = useVuelidate();
+    
     const user = useLoggedInUserStore();
-    return { v$, user };
-  },
-  validations() {
-    // validations
-    const validDate = (value) => {
-      const date = new Date(value)
-      return !isNaN(date)
-    }
-
-    return {
+    // Validation rules now receive Composition API reactive state.
+    const rules = {
       event: {
         name: { required },
         date: {
@@ -253,62 +248,64 @@ export default {
         },
       }
     }
-  },
-  async mounted() {
-    // when component is mounted, data is loaded
-    try {
-      const [eventResponse, clientsResponse, servicesResponse] = await Promise.all([
-        getEventById(this.$route.params.id),
-        getEventAttendees(this.$route.params.id),
-        getServices(),
-      ]);
+        const v$ = useVuelidate(rules, state)
+    // Methods are now functions in setup(), exposed to the template.
 
-      eventResponse.date = new Date(eventResponse.date).toISOString().substring(0, 10);
-
-      this.event = eventResponse;
-      this.clients = clientsResponse;
-      this.services = servicesResponse;
-     // this.inactiveServices = servicesResponse.filter(item => item.status === "Inactive")
-
-    } catch (error) {
-      toast.error('error loading data', error)
-    }
-  },
-  methods: {
-    // method called when user attempts to update the event -> asks for confirmation
-    async submitEventUpdate() {
+    async function submitEventUpdate() {
       // Trigger validation
-      this.v$.$validate();
+      v$.value.$validate();
 
-      if (this.v$.$error) {
+      if (v$.value.$error) {
         // Form is invalid, do not proceed
         return;
       }
 
       try {
-        const response = await updateEvent(this.$route.params.id, this.event);
+        const response = await updateEvent(route.params.id, state.event);
         toast.success(response)
-        this.$router.push('/findevents')
+        router.push('/findevents')
       } catch (error) {
         toast.error('error updating event', error)
       }
-    },
+    }
 
-    // method to make the API call to delete the event - can only be deleted if no attendees are in event
-    async submitDeleteEvent() {
+    async function submitDeleteEvent() {
       try {
-        if (this.event.attendees != 0)
+        if (state.event.attendees != 0)
         {
           toast.info('Event can not be deleted since it has attendees.')
           return
         }
-        const response = await deleteEvent(this.$route.params.id);
+        const response = await deleteEvent(route.params.id);
         toast.success(response)
-        this.$router.push('/findevents')
+        router.push('/findevents')
       } catch (error) {
         toast.error(error)
       }
-    },
+    }
+
+    onMounted(async () => {
+    // when component is mounted, data is loaded
+    try {
+      const [eventResponse, clientsResponse, servicesResponse] = await Promise.all([
+        getEventById(route.params.id),
+        getEventAttendees(route.params.id),
+        getServices(),
+      ]);
+
+      eventResponse.date = new Date(eventResponse.date).toISOString().substring(0, 10);
+
+      state.event = eventResponse;
+      state.clients = clientsResponse;
+      state.services = servicesResponse;
+     // this.inactiveServices = servicesResponse.filter(item => item.status === "Inactive")
+
+    } catch (error) {
+      toast.error('error loading data', error)
+    }
+  
+    })
+    return { router, ...toRefs(state), submitEventUpdate, submitDeleteEvent, v$, user }
   }
 }
 </script>
